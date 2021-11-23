@@ -1,6 +1,7 @@
 package router
 
 import (
+	"strconv"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -8,9 +9,10 @@ import (
 )
 
 type RouterConfig struct {
-	Delay  int
-	Mirror bool
-	Cors   bool
+	Delay      int
+	DelayQuery bool
+	Mirror     bool
+	Cors       bool
 }
 
 // GenerateHTTPRoutes is a function that creates a Gin Engine according to the configuration
@@ -32,8 +34,12 @@ func GenerateHTTPRoutes(config RouterConfig) *gin.Engine {
 			bodyData = string(byteData)
 		}
 
-		if config.Delay > 0 {
-			time.Sleep(time.Duration(config.Delay) * time.Millisecond)
+		delay := config.Delay
+		delayQuery, err := strconv.Atoi(c.DefaultQuery("delay", "0"))
+		if config.DelayQuery && delayQuery > 0 && err == nil {
+			time.Sleep(time.Duration(delayQuery) * time.Millisecond)
+		} else if delay > 0 {
+			time.Sleep(time.Duration(delay) * time.Millisecond)
 		}
 
 		c.JSON(200, gin.H{

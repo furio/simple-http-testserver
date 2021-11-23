@@ -26,9 +26,10 @@ func init() {
 
 func httpCommandRun(_ *cobra.Command, _ []string) {
 	routerConfig := router.GenerateHTTPRoutes(router.RouterConfig{
-		Delay:  delay,
-		Mirror: mirrorPayload,
-		Cors:   cors,
+		Delay:      delay,
+		DelayQuery: delayQuery,
+		Mirror:     mirrorPayload,
+		Cors:       cors,
 	})
 
 	srv, err := httpserver.CreateAndStartHTTPServer(httpserver.WebServerConfig{
