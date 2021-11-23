@@ -1,6 +1,8 @@
 package router
 
 import (
+	"time"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
@@ -24,17 +26,19 @@ func GenerateHTTPRoutes(config RouterConfig) *gin.Engine {
 
 	// Routes
 	r.Any("/*any", func(c *gin.Context) {
+		bodyData := "Hello from test server"
 		if config.Mirror {
-			bodyData, _ := c.GetRawData()
-
-			c.JSON(200, gin.H{
-				"message": string(bodyData),
-			})
-		} else {
-			c.JSON(200, gin.H{
-				"message": "Hello from test server",
-			})
+			byteData, _ := c.GetRawData()
+			bodyData = string(byteData)
 		}
+
+		if config.Delay > 0 {
+			time.Sleep(time.Duration(config.Delay) * time.Millisecond)
+		}
+
+		c.JSON(200, gin.H{
+			"message": bodyData,
+		})
 	})
 
 	return r
