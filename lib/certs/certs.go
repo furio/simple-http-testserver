@@ -17,10 +17,12 @@ import (
 	"github.com/emirpasic/gods/sets/hashset"
 )
 
-func GenerateCerts(dsnCert string) (serverTLSConf *tls.Config, clientTLSConf *tls.Config, err error) {
+func GenerateCerts(dsnCert string) (serverTLS []tls.Certificate, rootTLS []byte, err error) {
 
 	set := hashset.New("localhost")
-	set.Add(strings.Split(dsnCert, ","))
+	for dns := range strings.Split(dsnCert, ",") {
+		set.Add(dns)
+	}
 
 	dnsNames := make([]string, set.Size())
 	for i, v := range set.Values() {
@@ -30,17 +32,17 @@ func GenerateCerts(dsnCert string) (serverTLSConf *tls.Config, clientTLSConf *tl
 	return certsetup(dnsNames)
 }
 
-func certsetup(dnsList []string) (serverTLSConf *tls.Config, clientTLSConf *tls.Config, err error) {
+func certsetup(dnsList []string) (serverTLS []tls.Certificate, rootTLS []byte, err error) {
 	// set up our CA certificate
 	ca := &x509.Certificate{
-		SerialNumber: big.NewInt(2019),
+		SerialNumber: big.NewInt(2021),
 		Subject: pkix.Name{
 			Organization:  []string{"Furiosoft"},
 			Country:       []string{"IT"},
 			Province:      []string{""},
 			Locality:      []string{""},
 			StreetAddress: []string{"Italy"},
-			PostalCode:    []string{"00000"},
+			PostalCode:    []string{"90210"},
 		},
 		NotBefore:             time.Now(),
 		NotAfter:              time.Now().AddDate(10, 0, 0),
@@ -84,7 +86,7 @@ func certsetup(dnsList []string) (serverTLSConf *tls.Config, clientTLSConf *tls.
 			Province:      []string{""},
 			Locality:      []string{""},
 			StreetAddress: []string{"Italy"},
-			PostalCode:    []string{"00000"},
+			PostalCode:    []string{"901210"},
 		},
 		IPAddresses:  []net.IP{net.IPv4(127, 0, 0, 1), net.IPv6loopback},
 		DNSNames:     dnsList,
@@ -122,15 +124,8 @@ func certsetup(dnsList []string) (serverTLSConf *tls.Config, clientTLSConf *tls.
 		return nil, nil, err
 	}
 
-	serverTLSConf = &tls.Config{
-		Certificates: []tls.Certificate{serverCert},
-	}
-
-	certpool := x509.NewCertPool()
-	certpool.AppendCertsFromPEM(caPEM.Bytes())
-	clientTLSConf = &tls.Config{
-		RootCAs: certpool,
-	}
+	serverTLS = []tls.Certificate{serverCert}
+	rootTLS = caPEM.Bytes()
 
 	return
 }

@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"context"
+	"crypto/tls"
+	"encoding/pem"
 	"log"
 	"os"
 	"os/signal"
@@ -20,13 +22,14 @@ var (
 	keyFile      string
 	certFile     string
 	autoGenerate bool
-	certDSN      string
+	autocertDSN  string
+	autocertDump string
 )
 
 var httpsCmd = &cobra.Command{
 	Use:   "https",
 	Short: "Start HTTPs server",
-	Run:   httpCommandRun,
+	Run:   httpsCommandRun,
 }
 
 func init() {
@@ -34,23 +37,38 @@ func init() {
 	httpsCmd.PersistentFlags().StringVarP(&keyFile, "key-file", "", "", "file containing the private key")
 	httpsCmd.PersistentFlags().StringVarP(&certFile, "cert-file", "", "", "file containing the public cert(s)")
 
-	httpsCmd.PersistentFlags().BoolVarP(&delayQuery, "auto-cert", "", false, "generate the certs")
-	httpsCmd.PersistentFlags().StringVarP(&certDSN, "auto-cert-dsn", "", "localhost", "domain names (separated by ,) for the ssl certs")
+	httpsCmd.PersistentFlags().BoolVarP(&autoGenerate, "auto-cert", "", false, "generate the certs")
+	httpsCmd.PersistentFlags().StringVarP(&autocertDSN, "auto-cert-dsn", "", "localhost", "domain names (separated by ,) for the ssl certs")
+	httpsCmd.PersistentFlags().StringVarP(&autocertDump, "auto-cert-rootfile", "", "", "root cert file to dump")
 
-	RootCmd.AddCommand(httpCmd)
+	RootCmd.AddCommand(httpsCmd)
 }
 
 func httpsCommandRun(_ *cobra.Command, _ []string) {
+	var serverTLS []tls.Certificate
+	var rootTLS []byte
+
 	if autoGenerate {
-		if _, _, err := certs.GenerateCerts(certDSN); err != nil {
-
+		if server, root, err := certs.GenerateCerts(autocertDSN); err != nil {
+			log.Fatal("Cannot generate certs: ", err)
+		} else {
+			serverTLS = server
+			rootTLS = root
 		}
-
 	} else {
 		if caFile == "" || keyFile == "" || certFile == "" {
 			log.Fatal("ca-file, key-file, cert-file are required")
 		}
 
+	}
+
+	if autocertDump != "" {
+		f, err := os.OpenFile(autocertDump, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Fatal("Cannot write root cert file: ", err)
+		}
+		pem.Encode(f, &pem.Block{Type: "CERTIFICATE", Bytes: rootTLS})
+		f.Close()
 	}
 
 	routerConfig := router.GenerateHTTPRoutes(router.RouterConfig{
@@ -61,8 +79,10 @@ func httpsCommandRun(_ *cobra.Command, _ []string) {
 	})
 
 	srv, err := httpsserver.CreateAndStartHTTPsServer(httpsserver.WebServerConfig{
-		Bind: bindIp,
-		Port: port,
+		Bind:         bindIp,
+		Port:         port,
+		Certificates: serverTLS,
+		RootCA:       rootTLS,
 	}, routerConfig)
 
 	if err != nil {
