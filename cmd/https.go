@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"crypto/tls"
-	"encoding/pem"
 	"log"
 	"os"
 	"os/signal"
@@ -63,11 +62,11 @@ func httpsCommandRun(_ *cobra.Command, _ []string) {
 	}
 
 	if autocertDump != "" {
-		f, err := os.OpenFile(autocertDump, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		f, err := os.OpenFile(autocertDump, os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			log.Fatal("Cannot write root cert file: ", err)
 		}
-		pem.Encode(f, &pem.Block{Type: "CERTIFICATE", Bytes: rootTLS})
+		f.Write(rootTLS)
 		f.Close()
 	}
 

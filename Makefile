@@ -18,4 +18,4 @@ build:
 clean:
 	rm -rf ${BINARY_PATH}/
 
-do: clean init build
+all: clean init build
