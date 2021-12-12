@@ -9,6 +9,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
+	"io/ioutil"
 	"math/big"
 	"net"
 	"strings"
@@ -128,4 +129,32 @@ func certsetup(dnsList []string) (serverTLS []tls.Certificate, rootTLS []byte, e
 	rootTLS = caPEM.Bytes()
 
 	return
+}
+
+func LoadCerts(caFile, keyFile, certFile string) (serverTLS []tls.Certificate, rootTLS []byte, err error) {
+
+	caPEM, err := ioutil.ReadFile(caFile)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	certPrivKey, err := ioutil.ReadFile(keyFile)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	certPEM, err := ioutil.ReadFile(certFile)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	serverCert, err := tls.X509KeyPair(certPEM, certPrivKey)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	serverTLS = []tls.Certificate{serverCert}
+	rootTLS = caPEM
+
+	return serverTLS, rootTLS, nil
 }

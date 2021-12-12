@@ -59,9 +59,15 @@ func httpsCommandRun(_ *cobra.Command, _ []string) {
 			log.Fatal("ca-file, key-file, cert-file are required")
 		}
 
+		if server, root, err := certs.LoadCerts(caFile, keyFile, certFile); err != nil {
+			log.Fatal("Cannot load certs: ", err)
+		} else {
+			serverTLS = server
+			rootTLS = root
+		}
 	}
 
-	if autocertDump != "" {
+	if autoGenerate && autocertDump != "" {
 		f, err := os.OpenFile(autocertDump, os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			log.Fatal("Cannot write root cert file: ", err)
